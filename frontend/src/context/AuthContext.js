@@ -5,53 +5,37 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('itar_token'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.get('/api/auth/me')
-        .then(res => setUser(res.data))
-        .catch(() => logout())
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+    const t = localStorage.getItem('itar_token');
+    if (t) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
+      axios.get('/api/auth/me').then(r => setUser(r.data)).catch(() => logout()).finally(() => setLoading(false));
+    } else setLoading(false);
+  }, []);
 
   const login = async (email, password) => {
-    const res = await axios.post('/api/auth/login', { email, password });
-    const { token: t, user: u } = res.data;
-    localStorage.setItem('itar_token', t);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
-    setToken(t);
-    setUser(u);
-    return u;
+    const { data } = await axios.post('/api/auth/login', { email, password });
+    localStorage.setItem('itar_token', data.token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    setUser(data.user); return data.user;
   };
 
   const register = async (name, email, password) => {
-    const res = await axios.post('/api/auth/register', { name, email, password });
-    const { token: t, user: u } = res.data;
-    localStorage.setItem('itar_token', t);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
-    setToken(t);
-    setUser(u);
-    return u;
+    const { data } = await axios.post('/api/auth/register', { name, email, password });
+    localStorage.setItem('itar_token', data.token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    setUser(data.user); return data.user;
   };
 
   const logout = () => {
     localStorage.removeItem('itar_token');
     delete axios.defaults.headers.common['Authorization'];
-    setToken(null);
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

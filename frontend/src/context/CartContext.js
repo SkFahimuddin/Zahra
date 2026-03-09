@@ -7,51 +7,27 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const [cart, setCart] = useState({ items: [] });
-  const [cartLoading, setCartLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const fetchCart = async () => {
     if (!user) { setCart({ items: [] }); return; }
-    try {
-      setCartLoading(true);
-      const res = await axios.get('/api/cart');
-      setCart(res.data);
-    } catch (err) {
-      console.error('Cart fetch error:', err);
-    } finally {
-      setCartLoading(false);
-    }
+    setLoading(true);
+    try { const { data } = await axios.get('/api/cart'); setCart(data); }
+    catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchCart(); }, [user]);
 
-  const addToCart = async (productId, quantity = 1) => {
-    const res = await axios.post('/api/cart/add', { productId, quantity });
-    setCart(res.data);
-  };
+  const addToCart  = async (productId, qty = 1) => { const { data } = await axios.post('/api/cart/add', { productId, quantity: qty }); setCart(data); };
+  const updateQty  = async (productId, qty) => { const { data } = await axios.put('/api/cart/update', { productId, quantity: qty }); setCart(data); };
+  const removeItem = async (productId) => { const { data } = await axios.delete(`/api/cart/remove/${productId}`); setCart(data); };
+  const clearCart  = async () => { await axios.delete('/api/cart/clear'); setCart({ items: [] }); };
 
-  const updateQuantity = async (productId, quantity) => {
-    const res = await axios.put('/api/cart/update', { productId, quantity });
-    setCart(res.data);
-  };
+  const cartCount = cart.items?.reduce((s, i) => s + i.quantity, 0) || 0;
+  const cartTotal = cart.items?.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0) || 0;
 
-  const removeFromCart = async (productId) => {
-    const res = await axios.delete(`/api/cart/remove/${productId}`);
-    setCart(res.data);
-  };
-
-  const clearCart = async () => {
-    await axios.delete('/api/cart/clear');
-    setCart({ items: [] });
-  };
-
-  const cartCount = cart.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
-  const cartTotal = cart.items?.reduce((sum, i) => sum + (i.product?.price || 0) * i.quantity, 0) || 0;
-
-  return (
-    <CartContext.Provider value={{ cart, cartLoading, cartCount, cartTotal, addToCart, updateQuantity, removeFromCart, clearCart, fetchCart }}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={{ cart, loading, cartCount, cartTotal, addToCart, updateQty, removeItem, clearCart, fetchCart }}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => useContext(CartContext);

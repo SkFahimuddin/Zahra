@@ -1,138 +1,69 @@
-# ITAR Defense Supply — E-Commerce Website
+# ITAR — Arabian Perfumes E-Commerce
 
-A full-stack e-commerce platform for ITAR-controlled defense and aerospace components.
+A full-stack luxury Arabic perfume store. Gold on black aesthetic. Built with Node.js + Express + MongoDB + React.
 
-## Tech Stack
-- **Backend**: Node.js + Express + MongoDB (Mongoose)
-- **Frontend**: React + React Router
-- **Auth**: JWT with bcrypt
-- **File Upload**: Multer
+## 🚀 Deploy on Render (Full-Stack, Single Service)
 
----
+### 1. MongoDB Atlas
+1. Create free cluster at [mongodb.com/atlas](https://mongodb.com/atlas)
+2. Database Access → add user with username/password
+3. Network Access → add IP `0.0.0.0/0`
+4. Connect → Drivers → copy connection string
 
-## 🚀 Setup & Installation
+### 2. Push to GitHub
+Push this entire folder to a GitHub repository.
 
-### Prerequisites
-- Node.js v16+
-- MongoDB running locally (`mongod`) OR MongoDB Atlas URI
-- npm or yarn
+### 3. Deploy on Render
+1. Go to [render.com](https://render.com) → **New → Web Service**
+2. Connect your GitHub repo
+3. Settings:
+   - **Root Directory:** *(leave empty)*
+   - **Build Command:** `npm run install-all && npm run build`
+   - **Start Command:** `npm start`
+4. Environment Variables:
+   ```
+   MONGO_URI         = mongodb+srv://...your atlas URI...
+   JWT_SECRET        = some_long_random_string_here
+   ADMIN_EMAIL       = admin@itar.com
+   ADMIN_PASSWORD    = Admin@123
+   NODE_ENV          = production
+   PORT              = 10000
+   ```
+5. Click **Deploy**
 
----
+That's it! Your app will be live at `https://your-app.onrender.com`
 
-### 1. Backend Setup
+## 💻 Local Development
 
+### Backend
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Edit .env with your MongoDB URI and secrets
-npm run dev
+cp .env.example .env   # Edit with your MongoDB URI
+npm run dev            # http://localhost:5000
 ```
 
-The backend runs on **http://localhost:5000**
-
-**Default Admin credentials:**
-- Email: `admin@itar.com`
-- Password: `Admin@123`
-
----
-
-### 2. Frontend Setup
-
+### Frontend
 ```bash
 cd frontend
 npm install
-npm start
+npm start              # http://localhost:3000
 ```
 
-The frontend runs on **http://localhost:3000**
+## Default Admin
+- **Email:** admin@itar.com
+- **Password:** Admin@123
 
----
+## Features
+- 🛍️ Shop — Browse Attar, Oud & Bakhoor, Gift Sets, Accessories
+- 🔍 Search — Full-text search across products
+- ❤️ Wishlist — Save favorite fragrances
+- ⭐ Reviews — Star ratings and written reviews
+- 🏷️ Coupons — Percentage or fixed discount codes
+- 🛒 Cart + Checkout — Persistent cart with coupon support
+- 📦 Order History — Track all orders
+- 🔐 Admin Panel — Products, Orders, Customers, Coupons
 
-### 3. Configure `.env` (backend)
-
-```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/itar_ecom
-JWT_SECRET=your_super_secret_key_here
-ADMIN_EMAIL=admin@itar.com
-ADMIN_PASSWORD=Admin@123
-```
-
----
-
-## 📱 Pages & Features
-
-### Customer Side
-| Route | Description |
-|-------|-------------|
-| `/` | Home page with hero, featured products, categories |
-| `/shop` | Browse all products with search & category filter |
-| `/product/:id` | Product detail page |
-| `/cart` | Shopping cart |
-| `/checkout` | Checkout with shipping address |
-| `/orders` | My order history |
-| `/login` | Login page (redirects admin to `/admin`) |
-| `/register` | Register with ITAR certification checkbox |
-
-### Admin Side (login with admin credentials)
-| Route | Description |
-|-------|-------------|
-| `/admin` | Dashboard with stats & recent orders |
-| `/admin/products` | Add, edit, delete products with image upload |
-| `/admin/orders` | View all orders, update status & payment |
-| `/admin/users` | View all registered users |
-
----
-
-## 🗄️ Database Models
-
-- **User** — name, email, password (hashed), role (user/admin), address
-- **Product** — name, description, price, category, image, stock, itar flag, partNumber, manufacturer, featured
-- **Order** — user ref, items[], shippingAddress, totalPrice, status, paymentStatus
-- **Cart** — user ref, items[] with product ref + quantity
-
----
-
-## 🔐 Security Notes
-
-- JWT tokens expire in 7 days
-- Passwords hashed with bcrypt (10 rounds)
-- Admin routes protected by role middleware
-- ITAR compliance notice on all purchase flows
-- Only US shipping addresses accepted at checkout
-
----
-
-## 📦 API Endpoints
-
-### Auth
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me` (protected)
-
-### Products (public)
-- `GET /api/products` — list with ?search=, ?category=, ?page=, ?limit=
-- `GET /api/products/featured`
-- `GET /api/products/categories`
-- `GET /api/products/:id`
-
-### Cart (protected)
-- `GET /api/cart`
-- `POST /api/cart/add`
-- `PUT /api/cart/update`
-- `DELETE /api/cart/remove/:productId`
-- `DELETE /api/cart/clear`
-
-### Orders (protected)
-- `POST /api/orders`
-- `GET /api/orders/my`
-- `GET /api/orders/:id`
-
-### Admin (admin only)
-- `GET /api/admin/dashboard`
-- `GET/POST /api/admin/products`
-- `PUT/DELETE /api/admin/products/:id`
-- `GET /api/admin/orders`
-- `PUT /api/admin/orders/:id`
-- `GET /api/admin/users`
+## Tech Stack
+- **Backend:** Node.js, Express, MongoDB/Mongoose, JWT, Multer
+- **Frontend:** React 18, React Router v6, Axios, React Hot Toast

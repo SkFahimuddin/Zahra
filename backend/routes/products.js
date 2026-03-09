@@ -1,62 +1,39 @@
-const express = require('express');
-const router = express.Router();
+const router = require('express').Router();
 const Product = require('../models/Product');
 
-// Get all products with search/filter
 router.get('/', async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice, page = 1, limit = 12 } = req.query;
-    const query = {};
-
-    if (search) query.$text = { $search: search };
-    if (category && category !== 'all') query.category = category;
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
-    }
-
-    const total = await Product.countDocuments(query);
-    const products = await Product.find(query)
-      .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-
-    res.json({ products, total, pages: Math.ceil(total / limit), page: Number(page) });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const { search, category, minPrice, maxPrice, page = 1, limit = 12, sort } = req.query;
+    const q = {};
+    if (search) q.$text = { $search: search };
+    if (category && category !== 'all') q.category = category;
+    if (minPrice || maxPrice) { q.price = {}; if (minPrice) q.price.$gte = +minPrice; if (maxPrice) q.price.$lte = +maxPrice; }
+    let sortObj = { createdAt: -1 };
+    if (sort === 'price_asc') sortObj = { price: 1 };
+    if (sort === 'price_desc') sortObj = { price: -1 };
+    if (sort === 'rating') sortObj = { avgRating: -1 };
+    const total = await Product.countDocuments(q);
+    const products = await Product.find(q).sort(sortObj).skip((page - 1) * limit).limit(+limit);
+    res.json({ products, total, pages: Math.ceil(total / limit), page: +page });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// Get featured products
 router.get('/featured', async (req, res) => {
-  try {
-    const products = await Product.find({ featured: true }).limit(8);
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  try { res.json(await Product.find({ featured: true }).limit(8)); }
+  catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// Get categories
 router.get('/categories', async (req, res) => {
-  try {
-    const cats = await Product.distinct('category');
-    res.json(cats);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  try { res.json(await Product.distinct('category')); }
+  catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// Get single product
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Product not found' });
-    res.json(product);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const p = await Product.findById(req.params.id);
+    if (!p) return res.status(404).json({ message: 'Not found' });
+    res.json(p);
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 module.exports = router;

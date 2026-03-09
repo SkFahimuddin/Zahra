@@ -8,101 +8,112 @@ export default function Checkout() {
   const { cart, cartTotal, fetchCart } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ street: '', city: '', state: '', zip: '', country: 'United States', notes: '' });
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [form, setForm] = useState({ street: '', city: '', state: '', zip: '', country: 'Saudi Arabia', notes: '' });
 
   const items = cart.items || [];
+  const discount = couponApplied?.discount || 0;
+  const finalTotal = cartTotal - discount;
 
   const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const { data } = await axios.post('/api/coupons/validate', { code: couponCode, orderTotal: cartTotal });
+      setCouponApplied(data);
+      toast.success(`Coupon applied! You save $${data.discount.toFixed(2)}`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Invalid coupon');
+      setCouponApplied(null);
+    } finally { setCouponLoading(false); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (items.length === 0) { toast.error('Cart is empty'); return; }
+    if (!items.length) { toast.error('Cart is empty'); return; }
     setLoading(true);
     try {
-      const orderItems = items.map(i => ({ product: i.product._id, quantity: i.quantity }));
-      const res = await axios.post('/api/orders', {
-        items: orderItems,
-        shippingAddress: { street: form.street, city: form.city, state: form.state, zip: form.zip, country: form.country },
+      await axios.post('/api/orders', {
+        items: items.map(i => ({ product: i.product._id, quantity: i.quantity })),
+        shippingAddress: form,
+        couponCode: couponApplied ? couponCode : null,
         notes: form.notes
       });
       await fetchCart();
-      toast.success('Order placed successfully!');
-      navigate(`/orders`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Order failed');
-    } finally {
-      setLoading(false);
-    }
+      toast.success('✦ Order placed successfully!');
+      navigate('/orders');
+    } catch (e) { toast.error(e.response?.data?.message || 'Order failed'); }
+    finally { setLoading(false); }
   };
 
   return (
     <div className="page">
       <div className="container">
-        <h1 className="section-title" style={{ marginBottom: '32px' }}>CHECKOUT</h1>
-        <div style={styles.layout}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '32px', letterSpacing: '6px', marginBottom: '48px' }}>CHECKOUT</h1>
+        <div style={s.layout}>
           <form onSubmit={handleSubmit} style={{ flex: 1 }}>
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>SHIPPING ADDRESS</div>
-              <div style={styles.formGrid}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>STREET ADDRESS *</label>
-                  <input name="street" value={form.street} onChange={handleChange} required className="input" placeholder="123 Defense Ave" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>CITY *</label>
-                  <input name="city" value={form.city} onChange={handleChange} required className="input" placeholder="Washington" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>STATE *</label>
-                  <input name="state" value={form.state} onChange={handleChange} required className="input" placeholder="DC" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>ZIP CODE *</label>
-                  <input name="zip" value={form.zip} onChange={handleChange} required className="input" placeholder="20001" />
-                </div>
-                <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                  <label style={styles.label}>COUNTRY *</label>
+            <div style={s.block}>
+              <div style={s.blockTitle}>SHIPPING DETAILS</div>
+              <div style={s.grid2}>
+                {[['street', 'STREET ADDRESS', 'text', true, '123 Al Olaya, Riyadh'],
+                  ['city', 'CITY', 'text', true, 'Riyadh'],
+                  ['state', 'STATE / PROVINCE', 'text', false, 'Riyadh'],
+                  ['zip', 'POSTAL CODE', 'text', false, '11564']].map(([name, label, type, req, ph]) => (
+                  <div key={name} style={s.field}>
+                    <label style={s.label}>{label}</label>
+                    <input name={name} type={type} value={form[name]} onChange={handleChange} required={req} placeholder={ph} className="input" />
+                  </div>
+                ))}
+                <div style={{ ...s.field, gridColumn: '1/-1' }}>
+                  <label style={s.label}>COUNTRY</label>
                   <select name="country" value={form.country} onChange={handleChange} className="input">
-                    <option>United States</option>
+                    {['Saudi Arabia','UAE','Kuwait','Qatar','Bahrain','Oman','Jordan','Egypt','Pakistan','India','United Kingdom','United States','Canada','Australia'].map(c => <option key={c}>{c}</option>)}
                   </select>
-                  <span style={styles.fieldNote}>ITAR items can only be shipped to US addresses</span>
+                </div>
+                <div style={{ ...s.field, gridColumn: '1/-1' }}>
+                  <label style={s.label}>SPECIAL INSTRUCTIONS</label>
+                  <textarea name="notes" value={form.notes} onChange={handleChange} className="input" rows="2" placeholder="Gift message, special requests..." style={{ resize: 'vertical' }} />
                 </div>
               </div>
             </div>
 
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>ORDER NOTES</div>
-              <textarea name="notes" value={form.notes} onChange={handleChange} className="input" rows="3" placeholder="Special instructions, contract numbers, etc." style={{ resize: 'vertical' }} />
+            <div style={s.block}>
+              <div style={s.blockTitle}>PROMO CODE</div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <input value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())} placeholder="Enter coupon code" className="input" style={{ flex: 1, textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'var(--font-display)' }} />
+                <button type="button" onClick={applyCoupon} disabled={couponLoading} className="btn btn-outline">{couponLoading ? '...' : 'APPLY'}</button>
+              </div>
+              {couponApplied && (
+                <div style={s.couponSuccess}>✦ Code applied — you save <strong style={{ color: 'var(--gold)' }}>${couponApplied.discount.toFixed(2)}</strong></div>
+              )}
             </div>
 
-            <div style={styles.itarSection}>
-              <strong style={{ color: 'var(--red2)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '1px' }}>⚠ ITAR CERTIFICATION</strong>
-              <p style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '8px', lineHeight: 1.7 }}>
-                By placing this order, I certify that I am a US person (citizen, permanent resident, or protected individual) as defined under 22 C.F.R. § 120.15, that I will not export, re-export, or transfer these items without prior authorization from the US Department of State, and that all end-use will comply with applicable US export control laws.
-              </p>
-            </div>
-
-            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: '24px', fontSize: '16px' }}>
+            <button type="submit" disabled={loading} className="btn btn-gold" style={{ width: '100%', padding: '16px', letterSpacing: '4px', fontSize: '14px' }}>
               {loading ? 'PLACING ORDER...' : 'PLACE ORDER'}
             </button>
           </form>
 
-          {/* Order summary */}
-          <div style={styles.summary}>
-            <div style={styles.summaryTitle}>ORDER SUMMARY</div>
+          <div style={s.summary}>
+            <div style={s.sumTitle}>ORDER SUMMARY</div>
             {items.map(item => item.product && (
-              <div key={item.product._id} style={styles.summaryItem}>
+              <div key={item.product._id} style={s.sumItem}>
                 <div style={{ flex: 1 }}>
-                  <div style={styles.summaryItemName}>{item.product.name}</div>
-                  <div style={styles.summaryItemQty}>Qty: {item.quantity}</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', letterSpacing: '1px', color: 'var(--cream)' }}>{item.product.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text3)', fontFamily: 'var(--font-ui)' }}>Qty: {item.quantity} · {item.product.volume}</div>
                 </div>
-                <div style={styles.summaryItemPrice}>${(item.product.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '14px', color: 'var(--gold)' }}>${(item.product.price * item.quantity).toFixed(2)}</div>
               </div>
             ))}
-            <div style={styles.summaryTotal}>
-              <span>TOTAL</span>
-              <span style={{ color: 'var(--gold)' }}>${cartTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            <div style={s.sumRows}>
+              <div style={s.sumRow}><span>Subtotal</span><span>${cartTotal.toFixed(2)}</span></div>
+              {discount > 0 && <div style={{ ...s.sumRow, color: 'var(--green)' }}><span>Discount</span><span>-${discount.toFixed(2)}</span></div>}
+              <div style={s.sumRow}><span>Shipping</span><span style={{ color: cartTotal >= 199 ? 'var(--green)' : undefined }}>{cartTotal >= 199 ? 'FREE' : 'TBD'}</span></div>
             </div>
+            <div style={s.sumTotal}><span>TOTAL</span><span style={{ color: 'var(--gold)' }}>${finalTotal.toFixed(2)}</span></div>
           </div>
         </div>
       </div>
@@ -110,20 +121,18 @@ export default function Checkout() {
   );
 }
 
-const styles = {
-  layout: { display: 'flex', gap: '32px', alignItems: 'flex-start' },
-  section: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '24px', marginBottom: '20px' },
-  sectionTitle: { fontFamily: 'var(--font-display)', fontSize: '18px', letterSpacing: '2px', marginBottom: '20px', color: 'var(--text)' },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
-  formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  label: { fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '1.5px', color: 'var(--text3)' },
-  fieldNote: { fontSize: '11px', color: 'var(--text3)', fontStyle: 'italic' },
-  itarSection: { background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', borderRadius: '6px', padding: '16px' },
-  summary: { width: '300px', flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '20px', position: 'sticky', top: '110px' },
-  summaryTitle: { fontFamily: 'var(--font-display)', fontSize: '18px', letterSpacing: '2px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' },
-  summaryItem: { display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' },
-  summaryItemName: { fontSize: '13px', fontWeight: '500', color: 'var(--text)', marginBottom: '2px' },
-  summaryItemQty: { fontSize: '12px', color: 'var(--text3)' },
-  summaryItemPrice: { fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text)', flexShrink: 0 },
-  summaryTotal: { display: 'flex', justifyContent: 'space-between', padding: '16px 0 0', fontSize: '18px', fontWeight: '700', fontFamily: 'var(--font-mono)' },
+const s = {
+  layout: { display: 'flex', gap: '40px', alignItems: 'flex-start' },
+  block: { border: '1px solid var(--border)', padding: '28px', marginBottom: '20px', background: 'var(--surface)' },
+  blockTitle: { fontFamily: 'var(--font-display)', fontSize: '12px', letterSpacing: '4px', color: 'var(--gold)', marginBottom: '20px' },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+  field: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  label: { fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '3px', color: 'var(--text3)' },
+  couponSuccess: { marginTop: '12px', fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--font-ui)', fontStyle: 'italic' },
+  summary: { width: '300px', flexShrink: 0, border: '1px solid var(--border)', padding: '24px', background: 'var(--surface)', position: 'sticky', top: '130px' },
+  sumTitle: { fontFamily: 'var(--font-display)', fontSize: '12px', letterSpacing: '4px', color: 'var(--gold)', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid var(--border)' },
+  sumItem: { display: 'flex', gap: '12px', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' },
+  sumRows: { paddingTop: '16px' },
+  sumRow: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text2)', marginBottom: '8px', fontFamily: 'var(--font-ui)' },
+  sumTotal: { display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '16px', letterSpacing: '2px', padding: '16px 0', marginTop: '8px', borderTop: '1px solid var(--border)' },
 };

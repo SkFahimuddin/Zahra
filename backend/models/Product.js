@@ -1,18 +1,18 @@
 const mongoose = require('mongoose');
-
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   description: { type: String, required: true },
   price: { type: Number, required: true, min: 0 },
-  category: { type: String, required: true },
-  image: { type: String, default: '' },
+  originalPrice: { type: Number },
+  category: { type: String, required: true, enum: ['Attar', 'Oud & Bakhoor', 'Gift Sets', 'Accessories'] },
+  images: [{ type: String }],
   stock: { type: Number, default: 0, min: 0 },
-  itar: { type: Boolean, default: true }, // ITAR controlled flag
-  partNumber: { type: String, trim: true },
-  manufacturer: { type: String, trim: true },
-  featured: { type: Boolean, default: false }
+  featured: { type: Boolean, default: false },
+  tags: [String],
+  volume: String,
+  concentration: String,
+  avgRating: { type: Number, default: 0 },
+  numReviews: { type: Number, default: 0 }
 }, { timestamps: true });
-
-productSchema.index({ name: 'text', description: 'text', category: 'text', manufacturer: 'text' });
-
+productSchema.index({ name: 'text', description: 'text', tags: 'text', category: 'text' });
 module.exports = mongoose.model('Product', productSchema);
