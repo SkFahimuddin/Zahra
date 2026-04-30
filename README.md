@@ -67,4 +67,5 @@ npm start              # http://localhost:3000
 ## Tech Stack
 - **Backend:** Node.js, Express, MongoDB/Mongoose, JWT, Multer
 - **Frontend:** React 18, React Router v6, Axios, React Hot Toast
-- utternonsesnse 
+- yesss
+- 
